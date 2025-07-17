@@ -1,8 +1,8 @@
-// Bot Adonix IA hecho por Ado 😎
+// Bot Adonix IA hecho por Ado 😎 (Versión ESModule compatible con Node 24)
 import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 import fetch from 'node-fetch'
-import * as fs from 'fs'
+import fs from 'fs'
 
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('session')
@@ -14,19 +14,17 @@ async function startBot() {
 
   sock.ev.on('creds.update', saveCreds)
 
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+  sock.ev.on('messages.upsert', async ({ messages }) => {
     const m = messages[0]
     if (!m.message || m.key.fromMe || m.key.remoteJid === 'status@broadcast') return
 
     const text = m.message.conversation || m.message.extendedTextMessage?.text
     if (!text) return
 
-    // Reaccionar como IA
     await sock.sendMessage(m.key.remoteJid, {
       react: { text: "🤖", key: m.key }
     })
 
-    // Llamar API Adonix
     try {
       const res = await fetch(`https://apiadonix.vercel.app/api/adonix?q=${encodeURIComponent(text)}`)
       const json = await res.json()
@@ -49,13 +47,11 @@ ${json.respuesta}`
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut
-      console.log('conexión cerrada. ¿Reconectar?', shouldReconnect)
-      if (shouldReconnect) {
-        startBot()
-      }
+      const shouldReconnect = (lastDisconnect.error instanceof Boom) && lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
+      console.log('Conexión cerrada. ¿Reconectar?', shouldReconnect)
+      if (shouldReconnect) startBot()
     } else if (connection === 'open') {
-      console.log('✅ Bot Adonix IA conectado')
+      console.log('✅ Bot Adonix IA conectado correctamente')
     }
   })
 }
