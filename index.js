@@ -1,57 +1,55 @@
-// Bot Adonix IA hecho por Ado 😎 (Versión ESModule compatible con Node 24)
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys'
-import { Boom } from '@hapi/boom'
+
+import makeWASocket, { DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
+import P from 'pino'
 import fetch from 'node-fetch'
-import fs from 'fs'
+import { Boom } from '@hapi/boom'
 
-async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState('session')
+const startBot = async () => {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys')
+  const { version } = await fetchLatestBaileysVersion()
 
-  const sock = makeWASocket({
-    auth: state,
+  const sock = makeWASocket.default({
+    version,
+    logger: P({ level: 'silent' }),
     printQRInTerminal: true,
+    auth: state,
+    browser: ['AdonixIA-Bot', 'Chrome', '1.0.0']
   })
 
   sock.ev.on('creds.update', saveCreds)
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const m = messages[0]
-    if (!m.message || m.key.fromMe || m.key.remoteJid === 'status@broadcast') return
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    const msg = messages[0]
+    if (!msg.message || msg.key.fromMe || msg.key.remoteJid === 'status@broadcast') return
 
-    const text = m.message.conversation || m.message.extendedTextMessage?.text
-    if (!text) return
-
-    await sock.sendMessage(m.key.remoteJid, {
-      react: { text: "🤖", key: m.key }
-    })
+    const from = msg.key.remoteJid
+    const body = msg.message.conversation || msg.message.extendedTextMessage?.text || ''
+    if (!body) return
 
     try {
-      const res = await fetch(`https://apiadonix.vercel.app/api/adonix?q=${encodeURIComponent(text)}`)
-      const json = await res.json()
-      if (!json || !json.respuesta) throw 'Sin respuesta válida'
+      let res = await fetch(`https://apiadonix.vercel.app/api/adonix?q=${encodeURIComponent(body)}`)
+      let json = await res.json()
+      if (!json || !json.respuesta) return
 
-      await sock.sendMessage(m.key.remoteJid, {
-        text: `🤖 *Adonix IA responde:*
-
-${json.respuesta}`
-      }, { quoted: m })
-
+      await sock.sendMessage(from, { text: json.respuesta })
     } catch (e) {
-      console.error('Error IA:', e)
-      await sock.sendMessage(m.key.remoteJid, {
-        text: '⚠️ Error al obtener respuesta de Adonix IA.'
-      }, { quoted: m })
+      console.error('❌ Error al consultar la API:', e)
+      await sock.sendMessage(from, { text: '❌ Error con la IA, intenta más tarde.' })
     }
   })
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update
     if (connection === 'close') {
-      const shouldReconnect = (lastDisconnect.error instanceof Boom) && lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut
-      console.log('Conexión cerrada. ¿Reconectar?', shouldReconnect)
-      if (shouldReconnect) startBot()
+      let reason = new Boom(lastDisconnect?.error)?.output?.statusCode
+      if (reason === DisconnectReason.loggedOut) {
+        console.log('💀 Bot cerrado porque se cerró la sesión.')
+      } else {
+        console.log('⚠️ Conexión cerrada, reconectando...')
+        startBot()
+      }
     } else if (connection === 'open') {
-      console.log('✅ Bot Adonix IA conectado correctamente')
+      console.log('✅ Bot conectado!')
     }
   })
 }
