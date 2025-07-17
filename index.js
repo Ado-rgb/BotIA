@@ -56,12 +56,24 @@ const startBot = async () => {
         const json = await res.json()
         if (!json) return
 
-        if (json.imagen_generada && json.imagen_generada !== 'null') {
+        // Si viene video
+        if (json.video && json.video.download && json.video.download !== 'null') {
+          await sock.sendMessage(from, {
+            video: { url: json.video.download },
+            caption: json.video.comentario || '🎥 Aquí está tu video'
+          })
+        }
+
+        // Si viene imagen
+        else if (json.imagen_generada && json.imagen_generada !== 'null') {
           await sock.sendMessage(from, {
             image: { url: json.imagen_generada },
-            caption: 'Aquí tu imagen generada por Adonix IA'
+            caption: '🖼️ Aquí tu imagen generada por Adonix IA'
           })
-        } else if (json.respuesta) {
+        }
+
+        // Si solo es texto
+        else if (json.respuesta) {
           await sock.sendMessage(from, { text: json.respuesta })
         }
       } catch (e) {
