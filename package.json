@@ -1,5 +1,20 @@
 {
+  "name": "whatsapp-ai-bot",
+  "version": "1.0.0",
+  "description": "Bot de WhatsApp con IA usando Baileys",
+  "main": "index.js",
   "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "ai"
+  ],
+  "author": "Adonay",
+  "license": "MIT",
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.2",
     "node-fetch": "^3.4.0",
