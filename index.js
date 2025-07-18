@@ -54,12 +54,9 @@ const startBot = async () => {
       try {
         const res = await fetch(`https://apiadonix.vercel.app/api/adonix?q=${encodeURIComponent(body)}`)
         const json = await res.json()
-        if (!json) {
-          await sock.sendMessage(from, { text: '❌ No recibí nada de la API we' })
-          return
-        }
+        if (!json) return
 
-        // 🧠 Si viene video de YouTube
+        // Video directo
         if (json.video && json.video.download && json.video.download !== 'null') {
           await sock.sendMessage(from, {
             video: { url: json.video.download },
@@ -68,7 +65,7 @@ const startBot = async () => {
           return
         }
 
-        // 🖼️ Si viene imagen generada
+        // Imagen generada
         if (json.imagen_generada && json.imagen_generada !== 'null') {
           await sock.sendMessage(from, {
             image: { url: json.imagen_generada },
@@ -77,7 +74,7 @@ const startBot = async () => {
           return
         }
 
-        // 🔍 Si vienen resultados de búsqueda de YouTube
+        // Resultados búsqueda YouTube
         if (json.resultados_busqueda && Array.isArray(json.resultados_busqueda) && json.resultados_busqueda.length > 0) {
           let texto = '🔍 Aquí unos videos que encontré pa ti:\n\n'
           for (let v of json.resultados_busqueda) {
@@ -87,13 +84,13 @@ const startBot = async () => {
           return
         }
 
-        // 🗣️ Si viene solo texto
+        // Texto normal
         if (json.respuesta && json.respuesta.trim()) {
           await sock.sendMessage(from, { text: json.respuesta.trim() })
           return
         }
 
-        // 🤷 Si no viene nada reconocible
+        // Nada encontrado
         await sock.sendMessage(from, { text: '🤷‍♂️ No encontré nada pa eso bro' })
 
       } catch (e) {
