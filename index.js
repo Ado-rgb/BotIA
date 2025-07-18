@@ -54,7 +54,10 @@ const startBot = async () => {
       try {
         const res = await fetch(`https://apiadonix.vercel.app/api/adonix?q=${encodeURIComponent(body)}`)
         const json = await res.json()
-        if (!json) return
+        if (!json) {
+          await sock.sendMessage(from, { text: '❌ No recibí nada de la API we' })
+          return
+        }
 
         // 🧠 Si viene video de YouTube
         if (json.video && json.video.download && json.video.download !== 'null') {
@@ -90,7 +93,7 @@ const startBot = async () => {
           return
         }
 
-        // 🤷 Si no viene nada
+        // 🤷 Si no viene nada reconocible
         await sock.sendMessage(from, { text: '🤷‍♂️ No encontré nada pa eso bro' })
 
       } catch (e) {
