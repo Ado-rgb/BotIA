@@ -48,6 +48,7 @@ const startBot = async () => {
       if (!msg.message || msg.key.fromMe || msg.key.remoteJid === 'status@broadcast') return
 
       const from = msg.key.remoteJid
+      // Agarra texto simple o texto extendido (ej: respuestas)
       const body = msg.message.conversation || msg.message.extendedTextMessage?.text || ''
       if (!body) return
 
@@ -56,31 +57,49 @@ const startBot = async () => {
         const json = await res.json()
         if (!json) return
 
-        // Si viene video
+        // Si viene video directo para descargar
         if (json.video && json.video.download && json.video.download !== 'null') {
           await sock.sendMessage(from, {
             video: { url: json.video.download },
             caption: json.video.comentario || '🎥 Aquí está tu video'
           })
+          return
         }
 
-        // Si viene imagen
-        else if (json.imagen_generada && json.imagen_generada !== 'null') {
+        // Si viene imagen generada
+        if (json.imagen_generada && json.imagen_generada !== 'null') {
           await sock.sendMessage(from, {
             image: { url: json.imagen_generada },
             caption: '🖼️ Aquí tu imagen generada por Adonix IA'
           })
+          return
         }
 
-        // Si solo es texto
-        else if (json.respuesta) {
-          await sock.sendMessage(from, { text: json.respuesta })
+        // Si vienen resultados de búsqueda de YouTube (varios videos)
+        if (json.resultados_busqueda && Array.isArray(json.resultados_busqueda) && json.resultados_busqueda.length > 0) {
+          let texto = '🔍 Aquí unos videos que encontré pa ti:\n\n'
+          for (let v of json.resultados_busqueda) {
+            texto += `🎬 *${v.title}*\n⏳ ${v.duration} - 👀 ${v.views.toLocaleString()}\n🔗 ${v.url}\n\n`
+          }
+          await sock.sendMessage(from, { text: texto.trim() })
+          return
         }
+
+        // Si solo texto
+        if (json.respuesta) {
+          await sock.sendMessage(from, { text: json.respuesta })
+          return
+        }
+
+        // Si no hubo nada que enviar
+        await sock.sendMessage(from, { text: '🤷‍♂️ No encontré nada pa eso bro' })
+
       } catch (e) {
         console.error('❌ Error al consultar la API:', e)
         await sock.sendMessage(from, { text: '❌ Error con la IA, intenta más tarde.' })
       }
     })
+
   } catch (e) {
     console.error('Error fatal en startBot:', e)
     setTimeout(() => startBot(), 5000)
