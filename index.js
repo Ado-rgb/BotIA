@@ -56,7 +56,7 @@ const startBot = async () => {
         const json = await res.json()
         if (!json) return
 
-        // Video directo
+        // Verifica video
         if (json.video && json.video.download && json.video.download !== 'null') {
           await sock.sendMessage(from, {
             video: { url: json.video.download },
@@ -74,7 +74,7 @@ const startBot = async () => {
           return
         }
 
-        // Resultados búsqueda YouTube
+        // Búsqueda de YouTube
         if (json.resultados_busqueda && Array.isArray(json.resultados_busqueda) && json.resultados_busqueda.length > 0) {
           let texto = '🔍 Aquí unos videos que encontré pa ti:\n\n'
           for (let v of json.resultados_busqueda) {
@@ -84,13 +84,13 @@ const startBot = async () => {
           return
         }
 
-        // Texto normal
-        if (json.respuesta && json.respuesta.trim()) {
+        // Si hay respuesta escrita
+        if (json.respuesta && json.respuesta.trim().length > 0) {
           await sock.sendMessage(from, { text: json.respuesta.trim() })
           return
         }
 
-        // Nada encontrado
+        // Si no hay nada
         await sock.sendMessage(from, { text: '🤷‍♂️ No encontré nada pa eso bro' })
 
       } catch (e) {
