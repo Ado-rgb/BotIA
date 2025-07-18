@@ -9,7 +9,7 @@ import fetch from 'node-fetch'
 import { Boom } from '@hapi/boom'
 import qrcode from 'qrcode-terminal'
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.log('❗ Promise rechazada sin catch:', reason)
 })
 
@@ -48,7 +48,6 @@ const startBot = async () => {
       if (!msg.message || msg.key.fromMe || msg.key.remoteJid === 'status@broadcast') return
 
       const from = msg.key.remoteJid
-      // Agarra texto simple o texto extendido (ej: respuestas)
       const body = msg.message.conversation || msg.message.extendedTextMessage?.text || ''
       if (!body) return
 
@@ -57,7 +56,7 @@ const startBot = async () => {
         const json = await res.json()
         if (!json) return
 
-        // Si viene video directo para descargar
+        // 🧠 Si viene video de YouTube
         if (json.video && json.video.download && json.video.download !== 'null') {
           await sock.sendMessage(from, {
             video: { url: json.video.download },
@@ -66,7 +65,7 @@ const startBot = async () => {
           return
         }
 
-        // Si viene imagen generada
+        // 🖼️ Si viene imagen generada
         if (json.imagen_generada && json.imagen_generada !== 'null') {
           await sock.sendMessage(from, {
             image: { url: json.imagen_generada },
@@ -75,7 +74,7 @@ const startBot = async () => {
           return
         }
 
-        // Si vienen resultados de búsqueda de YouTube (varios videos)
+        // 🔍 Si vienen resultados de búsqueda de YouTube
         if (json.resultados_busqueda && Array.isArray(json.resultados_busqueda) && json.resultados_busqueda.length > 0) {
           let texto = '🔍 Aquí unos videos que encontré pa ti:\n\n'
           for (let v of json.resultados_busqueda) {
@@ -85,23 +84,25 @@ const startBot = async () => {
           return
         }
 
-        // Si solo texto
-        if (json.respuesta) {
-          await sock.sendMessage(from, { text: json.respuesta })
+        // 🗣️ Si viene solo texto
+        if (json.respuesta && json.respuesta.trim()) {
+          await sock.sendMessage(from, { text: json.respuesta.trim() })
           return
         }
 
-        // Si no hubo nada que enviar
+        // 🤷 Si no viene nada
         await sock.sendMessage(from, { text: '🤷‍♂️ No encontré nada pa eso bro' })
 
       } catch (e) {
         console.error('❌ Error al consultar la API:', e)
-        await sock.sendMessage(from, { text: '❌ Error con la IA, intenta más tarde.' })
+        await sock.sendMessage(from, {
+          text: '❌ Se fundió la IA we probá otra vez más tarde o metele otra pregunta'
+        })
       }
     })
 
   } catch (e) {
-    console.error('Error fatal en startBot:', e)
+    console.error('💀 Error fatal al iniciar el bot:', e)
     setTimeout(() => startBot(), 5000)
   }
 }
